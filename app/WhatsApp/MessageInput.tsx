@@ -28,13 +28,15 @@ import {
 import { useTheme } from "next-themes";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-interface MessageInputProps {
+type MessageInputProps = {
   chatId: string;
-  onSend?: (message: string, attachments?: File[]) => void;
+  onSend?: (message: string, attachments?: File[], voiceBlob?: Blob) => void;
   onVoiceRecord?: (blob: Blob) => void;
   onSchedule?: (message: string, date: Date) => void;
-}
+};
 
 export const MessageInput: React.FC<MessageInputProps> = ({
   chatId,
@@ -42,17 +44,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onVoiceRecord,
   onSchedule,
 }) => {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<string>("");
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [scheduledDate, setScheduledDate] = useState(new Date());
-  const [scheduledTime, setScheduledTime] = useState("");
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordingTime, setRecordingTime] = useState<number>(0);
+  const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null);
+  const [showSchedule, setShowSchedule] = useState<boolean>(false);
+  const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
+  const [scheduledTime, setScheduledTime] = useState<string>("");
+  const [audioURL, setAudioURL] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<number>();
+  const scheduledTimeoutIdRef = useRef<number | null>(null);
   const { theme } = useTheme();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +74,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: "audio/webm" });
+        setVoiceBlob(blob);
+        setAudioURL(URL.createObjectURL(blob));
         onVoiceRecord?.(blob);
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -92,22 +99,57 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     clearInterval(recordingTimerRef.current);
   };
 
+  const resetMessageInputs = () => {
+    setMessage("");
+    setAttachments([]);
+    setVoiceBlob(null);
+    setAudioURL(null);
+  };
+
   const handleSend = () => {
-    if ((message.trim() || attachments.length > 0) && onSend) {
-      onSend(message.trim(), attachments);
-      setMessage("");
-      setAttachments([]);
+    if ((message.trim() || attachments.length > 0 || voiceBlob) && onSend) {
+      onSend(message.trim(), attachments, voiceBlob || undefined);
+      resetMessageInputs();
+      toast.success("Message sent!");
     }
   };
 
   const handleScheduleSend = () => {
-    const date = new Date(scheduledDate);
-    const [hours, minutes] = scheduledTime.split(":");
-    date.setHours(parseInt(hours || "0"), parseInt(minutes || "0"));
+    if (!scheduledDate || !scheduledTime) {
+      toast.error("Please specify both a scheduled date and time.");
+      return;
+    }
 
-    onSchedule?.(message, date);
+    const scheduledDateTime = new Date(scheduledDate);
+    const [hours, minutes] = scheduledTime.split(":");
+    scheduledDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+
+    const timeDifference = scheduledDateTime.getTime() - Date.now();
+
+    if (timeDifference <= 0) {
+      toast.error("Scheduled time must be in the future. Please select a valid time.");
+      return;
+    }
+
     setShowSchedule(false);
-    setMessage("");
+
+    scheduledTimeoutIdRef.current = window.setTimeout(() => {
+      if (onSend) {
+        onSend(message.trim(), attachments, voiceBlob || undefined);
+      }
+      resetMessageInputs();
+      toast.success("Scheduled message sent!");
+    }, timeDifference);
+
+    toast.success(`Message scheduled for: ${scheduledDateTime.toLocaleString()}`);
+  };
+
+  const cancelScheduledMessage = () => {
+    if (scheduledTimeoutIdRef.current) {
+      clearTimeout(scheduledTimeoutIdRef.current);
+      scheduledTimeoutIdRef.current = null;
+      toast.info("Scheduled message canceled.");
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -118,20 +160,19 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <>
-      <div className="p-3 flex flex-col gap-2">
-        {/* Attachment Preview */}
+      <div className="p-5 flex flex-col gap-3 bg-gradient-to-br from-blue-50 via-teal-50 to-lime-100 rounded-lg shadow-lg dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 dark:text-white transition-all">
         {attachments.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto p-2">
+          <div className="flex gap-3 overflow-x-auto p-2">
             {attachments.map((file, index) => (
               <div key={index} className="relative group">
                 {file.type.startsWith("image/") ? (
                   <img
                     src={URL.createObjectURL(file)}
                     alt={file.name}
-                    className="w-20 h-20 object-cover rounded-lg"
+                    className="w-20 h-20 object-cover rounded-lg shadow-md"
                   />
                 ) : (
-                  <div className="w-20 h-20 flex items-center justify-center bg-default-100 rounded-lg">
+                  <div className="w-20 h-20 flex items-center justify-center bg-gray-300 dark:bg-gray-600 rounded-lg shadow-md">
                     <FileText size={24} />
                   </div>
                 )}
@@ -140,7 +181,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   size="sm"
                   color="danger"
                   variant="flat"
-                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100"
+                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-gray-800 text-white dark:bg-gray-700"
                   onPress={() => {
                     setAttachments((prev) => prev.filter((_, i) => i !== index));
                   }}
@@ -152,8 +193,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         )}
 
-        {/* Input Area */}
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-3">
           <input
             type="file"
             ref={fileInputRef}
@@ -163,11 +203,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onChange={handleFileSelect}
           />
 
-          {/* Attachment Button */}
           <Dropdown>
             <DropdownTrigger>
-              <Button isIconOnly variant="light">
-                <Paperclip size={20} className="text-default-500" />
+              <Button
+                isIconOnly
+                variant="light"
+                className="text-gray-700 dark:text-white transition-transform hover:scale-105"
+              >
+                <Paperclip size={20} />
               </Button>
             </DropdownTrigger>
             <DropdownMenu>
@@ -188,11 +231,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             </DropdownMenu>
           </Dropdown>
 
-          {/* Emoji Picker */}
           <Popover placement="top">
             <PopoverTrigger>
-              <Button isIconOnly variant="light">
-                <Smile size={20} className="text-default-500" />
+              <Button isIconOnly variant="light" className="text-gray-700 dark:text-white">
+                <Smile size={20} />
               </Button>
             </PopoverTrigger>
             <PopoverContent>
@@ -206,7 +248,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             </PopoverContent>
           </Popover>
 
-          {/* Message Input */}
           <Input
             className="flex-1"
             placeholder="Type a message..."
@@ -226,7 +267,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   size="sm"
                   onPress={() => setShowSchedule(true)}
                 >
-                  <Calendar size={20} className="text-default-500" />
+                  <Calendar size={20} />
                 </Button>
                 {isRecording ? (
                   <Button
@@ -245,15 +286,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                     size="sm"
                     onPress={startRecording}
                   >
-                    <Mic size={20} className="text-default-500" />
+                    <Mic size={20} />
                   </Button>
                 )}
                 <Button
                   isIconOnly
                   variant="light"
                   size="sm"
-                  isDisabled={!message.trim() && attachments.length === 0}
-                  onPress={handleSend}
+                  isDisabled
                 >
                   <Send size={20} />
                 </Button>
@@ -263,36 +303,39 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       </div>
 
-      {/* Schedule Modal */}
-      <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)}>
-        <ModalContent>
-          <ModalHeader>Schedule Message</ModalHeader>
-          <ModalBody className="gap-4">
-            <Input
-              type="date"
-              label="Date"
-              value={scheduledDate.toISOString().split("T")[0]}
-              onChange={(e) => setScheduledDate(new Date(e.target.value))}
-            />
-            <Input
-              type="time"
-              label="Time"
-              value={scheduledTime}
-              onChange={(e) => setScheduledTime(e.target.value)}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" onPress={() => setShowSchedule(false)}>
-              Cancel
-            </Button>
-            <Button color="primary" onPress={handleScheduleSend}>
-              Schedule
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      {showSchedule && (
+        <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)}>
+          <ModalContent>
+            <ModalHeader>Schedule Message</ModalHeader>
+            <ModalBody>
+              <div className="flex flex-col gap-4">
+                <Input
+                  type="date"
+                  label="Date"
+                  value={scheduledDate.toISOString().split("T")[0]}
+                  onChange={(e) => setScheduledDate(new Date(e.target.value))}
+                />
+                <Input
+                  type="time"
+                  label="Time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                />
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="danger" onPress={cancelScheduledMessage}>
+                Cancel Scheduled Message
+              </Button>
+              <Button color="primary" onPress={handleScheduleSend}>
+                Schedule
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
+
+      <ToastContainer />
     </>
   );
 };
-
-export default MessageInput;

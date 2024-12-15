@@ -6,12 +6,30 @@ import {
   Avatar,
   Button,
   Tooltip,
-  Divider,
-  Input,
-  Modal,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Divider
 } from "@nextui-org/react";
-import { Video, Phone, Search, X, Volume2, Mic, Camera } from "lucide-react";
-import Webcam from "react-webcam";
+import { 
+  Download, 
+  Bot, 
+  Settings, 
+  Phone,
+  MoreVertical,
+  ThumbsUp,
+  Heart,
+  Laugh,
+  Frown,
+  Clock,
+  Video,
+  PhoneCall,
+  Search
+} from "lucide-react";
 import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 import { Chat, Message } from './types';
@@ -20,55 +38,44 @@ interface ChatAreaProps {
   chat: Chat | null;
   messages: Message[];
   onSendMessage?: (message: string, attachments?: File[]) => void;
+  onReaction?: (messageId: string, reaction: string) => void;
+  onDownloadMedia?: (messageId: string) => void;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({
-  chat,
+const reactions = [
+  { emoji: "👍", icon: ThumbsUp },
+  { emoji: "❤️", icon: Heart },
+  { emoji: "😄", icon: Laugh },
+  { emoji: "😢", icon: Frown }
+];
+
+export const ChatArea: React.FC<ChatAreaProps> = ({ 
+  chat, 
   messages,
   onSendMessage,
+  onReaction,
+  onDownloadMedia
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isSearchActive, setIsSearchActive] = useState<boolean>(false);
-  const [isVideoCallActive, setIsVideoCallActive] = useState<boolean>(false);
-  const [isVoiceCallActive, setIsVoiceCallActive] = useState<boolean>(false);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [cameraFacingMode, setCameraFacingMode] = useState<"user" | "environment">("user");
+  const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  const toggleSearch = () => {
-    setIsSearchActive((prev) => !prev);
-    setSearchQuery("");
-  };
-
-  const handleVideoCall = () => {
-    setIsVideoCallActive(true);
-  };
-
-  const handleVoiceCall = () => {
-    setIsVoiceCallActive(true);
-  };
-
-  const endCall = () => {
-    setIsVideoCallActive(false);
-    setIsVoiceCallActive(false);
-    setIsMuted(false);
-  };
-
-  const toggleMute = () => {
-    setIsMuted((prev) => !prev);
-  };
-
-  const flipCamera = () => {
-    setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"));
-  };
+  if (!chat) {
+    return (
+      <Card className="h-full bg-gradient-to-r from-blue-50 to-blue-100">
+        <CardBody className="h-full flex flex-col items-center justify-center">
+          <div className="text-center text-gray-600">
+            <Phone size={48} className="mx-auto mb-4 text-blue-400" />
+            <p className="text-2xl font-bold mb-2 text-blue-600">Welcome to Chat</p>
+            <p className="text-md">Select a conversation to start messaging</p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
 
   const getMessageDate = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -81,114 +88,81 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     } else if (isYesterday) {
       return 'Yesterday';
     }
-    return date.toLocaleDateString([], {
+    return date.toLocaleDateString([], { 
       weekday: 'long',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
   };
 
-  // New function to check if message content matches search query
-  const isMessageMatched = (message: string) => {
-    return message.toLowerCase().includes(searchQuery.toLowerCase());
-  };
-
-  if (!chat) {
-    return (
-      <Card className="h-full">
-        <CardBody className="h-full items-center justify-center">
-          <div className="text-center text-default-500">
-            <Phone size={48} className="mx-auto mb-4" />
-            <p className="text-xl font-semibold mb-2">Welcome to Chat</p>
-            <p className="text-small">Select a conversation to start messaging</p>
-          </div>
-        </CardBody>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="h-full">
-      <CardHeader className="justify-between border-b flex-col">
-        <div className="flex justify-between items-center w-full mb-2">
-          <div className="flex gap-3">
-            <Avatar
-              src={chat.avatar || ''} // Add user DP or fallback to initials
-              size="sm"
-              className="transition-transform hover:scale-110"
-            >
-              {!chat.avatar && chat.name.charAt(0)} {/* Display the first letter of name if no avatar */}
-            </Avatar>
-            <div>
-              <h4 className="text-small font-semibold leading-none">{chat.name}</h4>
-              <p className="text-tiny text-default-500">
-                {chat.status === 'typing'
-                  ? 'typing...'
-                  : chat.status}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Tooltip content="Video Call">
-              <Button isIconOnly variant="light" size="sm" onClick={handleVideoCall}>
-                <Video size={20} />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Voice Call">
-              <Button isIconOnly variant="light" size="sm" onClick={handleVoiceCall}>
-                <Phone size={20} />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Search">
-              <Button
-                isIconOnly
-                variant="light"
-                size="sm"
-                onClick={toggleSearch}
-              >
-                <Search size={20} />
-              </Button>
-            </Tooltip>
+    <Card className="h-full bg-white shadow-xl rounded-lg">
+      <CardHeader className="flex justify-between items-center border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Avatar
+            name={chat.name}
+            size="sm"
+            className="transition-transform transform hover:scale-110 shadow-md"
+          />
+          <div>
+            <h4 className="text-lg font-semibold leading-none">{chat.name}</h4>
+            <p className="text-sm text-gray-200">
+              {chat.status === 'typing' 
+                ? 'typing...' 
+                : chat.status}
+            </p>
           </div>
         </div>
-        {isSearchActive && (
-          <Input
-            placeholder="Search messages..."
-            size="sm"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            contentLeft={<Search size={20} />}
-            className="w-full"
-          />
-        )}
+        <div className="flex gap-2">
+          <Tooltip content="Video Call">
+            <Button isIconOnly variant="flat" size="sm" className="hover:bg-blue-700">
+              <Video size={20} className="text-white" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Phone Call">
+            <Button isIconOnly variant="flat" size="sm" className="hover:bg-blue-700">
+              <PhoneCall size={20} className="text-white" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Search">
+            <Button isIconOnly variant="flat" size="sm" className="hover:bg-blue-700">
+              <Search size={20} className="text-white" />
+            </Button>
+          </Tooltip>
+        </div>
       </CardHeader>
 
-      <Divider />
+      <Divider className="bg-gray-200"/>
 
-      <CardBody className="p-4 overflow-y-auto">
-        <div className="space-y-4">
+      <CardBody className="p-4 overflow-y-auto bg-gray-50">
+        <div className="space-y-6">
           {messages.map((message, index) => {
-            const showDateSeparator = index === 0 ||
-              getMessageDate(message.timestamp) !==
+            const showDateSeparator = index === 0 || 
+              getMessageDate(message.timestamp) !== 
               getMessageDate(messages[index - 1].timestamp);
 
             return (
               <React.Fragment key={message.id}>
                 {showDateSeparator && (
                   <div className="flex justify-center">
-                    <span className="text-tiny bg-default-100 text-default-600 px-3 py-1 rounded-full">
+                    <span className="text-xs font-medium bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
                       {getMessageDate(message.timestamp)}
                     </span>
                   </div>
                 )}
                 <MessageBubble
                   message={message}
-                  isSequential={index > 0 &&
+                  isSequential={
+                    index > 0 &&
                     messages[index - 1].sender === message.sender &&
                     !showDateSeparator &&
                     Date.parse(message.timestamp) - Date.parse(messages[index - 1].timestamp) < 60000
                   }
-                  isHighlighted={searchQuery && isMessageMatched(message.content)} // New prop for highlight
+                  onReaction={onReaction}
+                  // onDownloadMedia={onDownloadMedia}
+                  // isHovered={hoveredMessage === message.id}
+                  // onHover={setHoveredMessage}
+                  // reactions={reactions}
                 />
               </React.Fragment>
             );
@@ -197,58 +171,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       </CardBody>
 
-      <Divider />
+      <Divider className="bg-gray-200"/>
 
-      <MessageInput
-        chatId={chat.id}
+      <MessageInput 
+        chatId={chat.id} 
         onSend={onSendMessage}
       />
-
-      {/* Video Call Modal */}
-      <Modal
-        isOpen={isVideoCallActive}
-        onClose={endCall}
-        aria-labelledby="video-call-modal"
-        className="w-screen h-screen flex justify-center items-center bg-black bg-opacity-75"
-      >
-        <div className="relative flex flex-col justify-center items-center w-full h-full">
-          <Webcam
-            videoConstraints={{ facingMode: cameraFacingMode }}
-            className="w-full h-full bg-black object-cover"
-          />
-          <div className="absolute bottom-8 flex gap-6">
-            <Button isIconOnly variant="light" onClick={toggleMute}>
-              {isMuted ? <Mic size={24} /> : <Volume2 size={24} />}
-            </Button>
-            <Button isIconOnly variant="light" onClick={flipCamera}>
-              <Camera size={24} />
-            </Button>
-            <Button isIconOnly className="bg-red-500 text-white" onClick={endCall}>
-              <X size={24} />
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Voice Call Modal */}
-      <Modal
-        isOpen={isVoiceCallActive}
-        onClose={endCall}
-        aria-labelledby="voice-call-modal"
-        className="w-screen h-screen flex justify-center items-center bg-black bg-opacity-75"
-      >
-        <div className="flex flex-col items-center">
-          <p className="text-white text-2xl mb-6">Voice Call</p>
-          <div className="flex gap-6">
-            <Button isIconOnly variant="light" onClick={toggleMute}>
-              {isMuted ? <Mic size={24} /> : <Volume2 size={24} />}
-            </Button>
-            <Button isIconOnly className="bg-red-500 text-white" onClick={endCall}>
-              <X size={24} />
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </Card>
   );
 };

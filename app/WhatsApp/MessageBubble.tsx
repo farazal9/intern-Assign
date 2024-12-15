@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   Avatar,
   Button,
-  Progress,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -12,7 +11,6 @@ import {
   Heart,
   Laugh,
   Frown,
-  MoreVertical,
   Reply,
   Trash,
 } from "lucide-react";
@@ -21,6 +19,7 @@ import { Message } from "./types";
 interface MessageBubbleProps {
   message: Message;
   isSequential?: boolean;
+  isHighlighted?: boolean; // Add this line
   onReaction?: (messageId: string, reaction: string) => void;
   onReply?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
@@ -36,6 +35,7 @@ const reactions = [
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isSequential = false,
+  isHighlighted = false, // Default value for isHighlighted
   onReaction,
   onReply,
   onDelete,
@@ -47,7 +47,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     <div
       className={`group flex items-end gap-2 ${
         isOutgoing ? "justify-end" : "justify-start"
-      } ${isSequential ? "mt-1" : "mt-4"}`}
+      } ${isSequential ? "mt-1" : "mt-4"} ${
+        isHighlighted ? "bg-yellow-200" : "" // Highlighted message background
+      }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -75,9 +77,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <p className="font-medium text-default-600">
               {message.replyTo.sender}
             </p>
-            <p className="text-default-500 truncate">
-              {message.replyTo.content}
-            </p>
+            <p className="text-default-500 truncate">{message.replyTo.content}</p>
           </div>
         )}
 

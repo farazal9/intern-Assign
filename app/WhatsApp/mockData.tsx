@@ -1,4 +1,5 @@
 // src/components/WhatsApp/mockData.ts
+
 import { Chat, Message, ScheduledMessage, AutoReplyRule } from './types';
 
 // Mock accounts data with 'as const' for immutability
@@ -206,3 +207,4 @@ export const MOCK_AUTO_REPLY_RULES: AutoReplyRule[] = [
     schedule: 'outside-hours', // Available only outside working hours
   },
 ];
+

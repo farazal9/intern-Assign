@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
@@ -17,7 +17,7 @@ import { MessageCircle, Plus, Menu } from "lucide-react";
 import { ChatSidebar } from './ChatSideBar';
 import { ChatArea } from './ChatArea';
 import { ChatBotConfig } from './types';
-import { BotSettings } from './ChatBotComponents';
+import BotSettings from "./ChatBotComponents";
 import { GroupChatManagement } from './GroupChatComponents';
 import { MOCK_ACCOUNTS, MOCK_CHATS, MOCK_MESSAGES } from './mockData';
 import { Chat, Message } from './types';
@@ -171,9 +171,9 @@ export const WhatsAppDashboard = () => {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Mobile Header */}
-      <Navbar className="lg:hidden">
+      <Navbar className="lg:hidden bg-primary/90 shadow-md">
         <NavbarContent>
           <Button
             isIconOnly
@@ -206,7 +206,6 @@ export const WhatsAppDashboard = () => {
         onClose={onSidebarClose}
         size="full"
         scrollBehavior="inside"
-        // placement="left"
       >
         <ModalContent>
           <ModalHeader className="border-b border-divider">
@@ -220,8 +219,6 @@ export const WhatsAppDashboard = () => {
                 onSidebarClose();
               }}
               isMobile
-              // typingStatus={typingStatus}
-              // unreadCounts={unreadCounts}
             />
           </ModalBody>
         </ModalContent>
@@ -234,7 +231,7 @@ export const WhatsAppDashboard = () => {
         size="2xl"
       >
         <ModalContent>
-          <ModalHeader>Bot Settings</ModalHeader>
+          <ModalHeader className="text-xl font-bold">Bot Settings</ModalHeader>
           <ModalBody>
             <BotSettings
               config={{
@@ -257,7 +254,7 @@ export const WhatsAppDashboard = () => {
         size="2xl"
       >
         <ModalContent>
-          <ModalHeader>Create Group</ModalHeader>
+          <ModalHeader className="text-xl font-bold">Create Group</ModalHeader>
           <ModalBody>
             <GroupChatManagement
               isOpen={isGroupManagementOpen}
@@ -275,24 +272,21 @@ export const WhatsAppDashboard = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-80 border-r border-divider">
+        <div className="hidden lg:block w-80 border-r border-divider bg-gray-50">
           <ChatSidebar
             selectedChat={selectedChat}
             onSelectChat={setSelectedChat}
-            // typingStatus={typingStatus}
-            // unreadCounts={unreadCounts}
           />
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 bg-white">
           <ChatArea
             chat={selectedChat}
             messages={chatMessages}
             onSendMessage={handleSendMessage}
             onReaction={handleMessageReaction}
             onDownloadMedia={handleMediaDownload}
-            // isLoading={isLoading}
           />
         </div>
       </div>
