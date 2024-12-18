@@ -6,29 +6,13 @@ import {
   Avatar,
   Button,
   Tooltip,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
   Divider
 } from "@nextui-org/react";
-import { 
-  Download, 
-  Bot, 
-  Settings, 
-  Phone,
-  MoreVertical,
-  ThumbsUp,
-  Heart,
-  Laugh,
-  Frown,
-  Clock,
-  Video,
-  PhoneCall,
-  Search
+import {
+  Download,
+  Bot,
+  Settings,
+  Phone
 } from "lucide-react";
 import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
@@ -42,19 +26,10 @@ interface ChatAreaProps {
   onDownloadMedia?: (messageId: string) => void;
 }
 
-const reactions = [
-  { emoji: "👍", icon: ThumbsUp },
-  { emoji: "❤️", icon: Heart },
-  { emoji: "😄", icon: Laugh },
-  { emoji: "😢", icon: Frown }
-];
-
-export const ChatArea: React.FC<ChatAreaProps> = ({ 
-  chat, 
+export const ChatArea: React.FC<ChatAreaProps> = ({
+  chat,
   messages,
-  onSendMessage,
-  onReaction,
-  onDownloadMedia
+  onSendMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
@@ -62,20 +37,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  if (!chat) {
-    return (
-      <Card className="h-full bg-gradient-to-r from-blue-50 to-blue-100">
-        <CardBody className="h-full flex flex-col items-center justify-center">
-          <div className="text-center text-gray-600">
-            <Phone size={48} className="mx-auto mb-4 text-blue-400" />
-            <p className="text-2xl font-bold mb-2 text-blue-600">Welcome to Chat</p>
-            <p className="text-md">Select a conversation to start messaging</p>
-          </div>
-        </CardBody>
-      </Card>
-    );
-  }
 
   const getMessageDate = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -88,64 +49,79 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     } else if (isYesterday) {
       return 'Yesterday';
     }
-    return date.toLocaleDateString([], { 
+    return date.toLocaleDateString([], {
       weekday: 'long',
       month: 'long',
       day: 'numeric'
     });
   };
 
+  if (!chat) {
+    return (
+      <Card className="h-full bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-none sm:rounded-lg">
+         <CardBody className="h-full flex flex-col items-center justify-center">
+          <div className="text-center text-gray-400">
+            <Phone size={48} className="mx-auto mb-4 text-blue-300" />
+            <p className="text-2xl font-bold mb-2 text-blue-500">Welcome to Chat</p>
+            <p className="text-md">Select a conversation to start messaging</p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="h-full bg-white shadow-xl rounded-lg">
-      <CardHeader className="flex justify-between items-center border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3">
-        <div className="flex items-center gap-3">
+    <Card className="h-full bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-none sm:rounded-lg">
+
+      <CardHeader className="justify-between border-b border-gray-700">
+        <div className="flex gap-3">
           <Avatar
             name={chat.name}
             size="sm"
-            className="transition-transform transform hover:scale-110 shadow-md"
+            className="transition-transform hover:scale-110"
           />
           <div>
-            <h4 className="text-lg font-semibold leading-none">{chat.name}</h4>
-            <p className="text-sm text-gray-200">
-              {chat.status === 'typing' 
-                ? 'typing...' 
+            <h4 className="text-small font-semibold leading-none text-gray-200">{chat.name}</h4>
+            <p className="text-tiny text-gray-400">
+              {chat.status === 'typing'
+                ? 'typing...'
                 : chat.status}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Tooltip content="Video Call">
-            <Button isIconOnly variant="flat" size="sm" className="hover:bg-blue-700">
-              <Video size={20} className="text-white" />
+          <Tooltip content="Media & Files">
+            <Button isIconOnly variant="light" size="sm" className="text-gray-400 hover:text-white">
+              <Download size={20} />
             </Button>
           </Tooltip>
-          <Tooltip content="Phone Call">
-            <Button isIconOnly variant="flat" size="sm" className="hover:bg-blue-700">
-              <PhoneCall size={20} className="text-white" />
+          <Tooltip content="Auto-Reply Settings">
+            <Button isIconOnly variant="light" size="sm" className="text-gray-400 hover:text-white">
+              <Bot size={20} />
             </Button>
           </Tooltip>
-          <Tooltip content="Search">
-            <Button isIconOnly variant="flat" size="sm" className="hover:bg-blue-700">
-              <Search size={20} className="text-white" />
+          <Tooltip content="Chat Settings">
+            <Button isIconOnly variant="light" size="sm" className="text-gray-400 hover:text-white">
+              <Settings size={20} />
             </Button>
           </Tooltip>
         </div>
       </CardHeader>
 
-      <Divider className="bg-gray-200"/>
+      <Divider className="border-gray-700" />
 
-      <CardBody className="p-4 overflow-y-auto bg-gray-50">
-        <div className="space-y-6">
+      <CardBody className="p-4 overflow-y-auto">
+        <div className="space-y-4">
           {messages.map((message, index) => {
-            const showDateSeparator = index === 0 || 
-              getMessageDate(message.timestamp) !== 
+            const showDateSeparator = index === 0 ||
+              getMessageDate(message.timestamp) !==
               getMessageDate(messages[index - 1].timestamp);
 
             return (
               <React.Fragment key={message.id}>
                 {showDateSeparator && (
                   <div className="flex justify-center">
-                    <span className="text-xs font-medium bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
+                    <span className="text-tiny bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
                       {getMessageDate(message.timestamp)}
                     </span>
                   </div>
@@ -158,11 +134,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     !showDateSeparator &&
                     Date.parse(message.timestamp) - Date.parse(messages[index - 1].timestamp) < 60000
                   }
-                  onReaction={onReaction}
-                  // onDownloadMedia={onDownloadMedia}
-                  // isHovered={hoveredMessage === message.id}
-                  // onHover={setHoveredMessage}
-                  // reactions={reactions}
                 />
               </React.Fragment>
             );
@@ -171,11 +142,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       </CardBody>
 
-      <Divider className="bg-gray-200"/>
+      <Divider className="border-gray-700" />
 
-      <MessageInput 
-        chatId={chat.id} 
+      <MessageInput
+        chatId={chat.id}
         onSend={onSendMessage}
+        className="bg-gray-700 text-gray-300 placeholder-gray-500 hover:bg-gray-600 focus:ring-gray-500"
       />
     </Card>
   );

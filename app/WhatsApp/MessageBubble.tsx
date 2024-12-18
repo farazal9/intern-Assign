@@ -1,25 +1,27 @@
-import React, { useState } from "react";
+
+import React, { useState } from 'react';
 import {
   Avatar,
   Button,
+  Progress,
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@nextui-org/react";
-import {
+import { 
   ThumbsUp,
   Heart,
   Laugh,
   Frown,
+  MoreVertical,
   Reply,
-  Trash,
+  Trash 
 } from "lucide-react";
-import { Message } from "./types";
+import { Message } from './types';
 
 interface MessageBubbleProps {
   message: Message;
   isSequential?: boolean;
-  isHighlighted?: boolean; // Add this line
   onReaction?: (messageId: string, reaction: string) => void;
   onReply?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
@@ -29,31 +31,27 @@ const reactions = [
   { emoji: "👍", icon: ThumbsUp },
   { emoji: "❤️", icon: Heart },
   { emoji: "😄", icon: Laugh },
-  { emoji: "😢", icon: Frown },
+  { emoji: "😢", icon: Frown }
 ];
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isSequential = false,
-  isHighlighted = false, // Default value for isHighlighted
   onReaction,
   onReply,
   onDelete,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const isOutgoing = message.sender === "user";
+  const isOutgoing = message.sender === 'user';
 
   return (
-    <div
+    <div 
       className={`group flex items-end gap-2 ${
-        isOutgoing ? "justify-end" : "justify-start"
-      } ${isSequential ? "mt-1" : "mt-4"} ${
-        isHighlighted ? "bg-yellow-200" : "" // Highlighted message background
-      }`}
+        isOutgoing ? 'justify-end' : 'justify-start'
+      } ${isSequential ? 'mt-1' : 'mt-4'}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Display avatar for incoming non-sequential messages */}
       {!isOutgoing && !isSequential && (
         <Avatar
           name={message.sender}
@@ -62,37 +60,40 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         />
       )}
 
-      <div
-        className={`relative max-w-[70%] ${
-          !isOutgoing && isSequential ? "ml-8" : ""
-        }`}
-      >
+      <div className={`relative max-w-[70%] ${
+        !isOutgoing && isSequential ? 'ml-8' : ''
+      }`}>
         {/* Reply preview */}
         {message.replyTo && (
-          <div
-            className={`mb-1 p-2 rounded-lg text-tiny ${
-              isOutgoing ? "bg-primary/20 ml-4" : "bg-default-100 mr-4"
-            }`}
-          >
+          <div className={`
+            mb-1 p-2 rounded-lg text-tiny
+            ${isOutgoing 
+              ? 'bg-primary/20 ml-4' 
+              : 'bg-default-100 mr-4'
+            }
+          `}>
             <p className="font-medium text-default-600">
               {message.replyTo.sender}
             </p>
-            <p className="text-default-500 truncate">{message.replyTo.content}</p>
+            <p className="text-default-500 truncate">
+              {message.replyTo.content}
+            </p>
           </div>
         )}
 
-        {/* Main message bubble */}
+     
+        {/* Message Bubble */}
         <div
-          className={`rounded-lg p-3 ${
+          className={`p-2 rounded-lg shadow-md ${
             isOutgoing
-              ? "bg-primary text-primary-foreground"
-              : "bg-default-100"
+              ? "bg-[#DCF8C6] text-black" // Outgoing (green bubble)
+              : "bg-white text-black" // Incoming (white bubble)
           }`}
         >
           {/* Media content */}
           {message.media && (
             <div className="mb-2">
-              {message.media.type === "image" && (
+              {message.media.type === 'image' && (
                 <img
                   src={message.media.url}
                   alt={message.media.filename}
@@ -103,14 +104,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
 
           {/* Message text */}
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="whitespace-pre-wrap break-words">
+            {message.content}
+          </p>
 
-          {/* Footer with timestamp */}
+          {/* Message footer */}
           <div className="flex items-center justify-end gap-1 mt-1">
             <span className="text-tiny opacity-70">
               {new Date(message.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
+                hour: '2-digit',
+                minute: '2-digit'
               })}
             </span>
           </div>
@@ -119,7 +122,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Reaction and action buttons */}
         {isHovered && (
           <>
-            {/* Reaction buttons */}
             <Popover placement="top">
               <PopoverTrigger>
                 <Button
@@ -127,7 +129,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   size="sm"
                   variant="light"
                   className={`absolute ${
-                    isOutgoing ? "-left-16" : "-right-16"
+                    isOutgoing ? '-left-16' : '-right-16'
                   } bottom-0`}
                 >
                   <ThumbsUp size={16} />
@@ -150,12 +152,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </PopoverContent>
             </Popover>
 
-            {/* Reply and delete buttons */}
-            <div
-              className={`absolute ${
-                isOutgoing ? "-right-16" : "-left-16"
-              } top-0 flex flex-col gap-1`}
-            >
+            <div className={`absolute ${
+              isOutgoing ? '-right-16' : '-left-16'
+            } top-0 flex flex-col gap-1`}>
               <Button
                 isIconOnly
                 size="sm"
@@ -178,6 +177,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           </>
         )}
+
+        {/* Reactions display */}
+        {/* {message.reactions?.length > 0 && (
+          <div className="flex gap-1 mt-1">
+            {message.reactions.map((reaction, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 rounded-full bg-default-100 text-tiny"
+              >
+                {reaction}
+              </span>
+            ))}
+          </div>
+        )} */}
       </div>
     </div>
   );

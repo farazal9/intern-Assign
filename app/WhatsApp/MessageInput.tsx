@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import {
   Button,
@@ -32,6 +33,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 type MessageInputProps = {
+  className?: string;
   chatId: string;
   onSend?: (message: string, attachments?: File[], voiceBlob?: Blob) => void;
   onVoiceRecord?: (blob: Blob) => void;
@@ -99,56 +101,78 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     clearInterval(recordingTimerRef.current);
   };
 
-  const resetMessageInputs = () => {
-    setMessage("");
-    setAttachments([]);
-    setVoiceBlob(null);
-    setAudioURL(null);
-  };
-
   const handleSend = () => {
     if ((message.trim() || attachments.length > 0 || voiceBlob) && onSend) {
       onSend(message.trim(), attachments, voiceBlob || undefined);
-      resetMessageInputs();
-      toast.success("Message sent!");
+      setMessage("");
+      setAttachments([]);
+      setVoiceBlob(null);
+      setAudioURL(null);
     }
   };
 
+
   const handleScheduleSend = () => {
     if (!scheduledDate || !scheduledTime) {
-      toast.error("Please specify both a scheduled date and time.");
+      toast.error("Please specify both a scheduled date and time.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
       return;
     }
 
-    const scheduledDateTime = new Date(scheduledDate);
+    const date = new Date(scheduledDate);
     const [hours, minutes] = scheduledTime.split(":");
-    scheduledDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+    date.setHours(parseInt(hours || "0"), parseInt(minutes || "0"), 0, 0); // Exact time (HH:MM:00:000)
 
-    const timeDifference = scheduledDateTime.getTime() - Date.now();
+    const now = new Date();
+    const timeDifference = date.getTime() - now.getTime();
 
-    if (timeDifference <= 0) {
-      toast.error("Scheduled time must be in the future. Please select a valid time.");
-      return;
-    }
+    if (timeDifference > 0) {
+      setShowSchedule(false);
 
-    setShowSchedule(false);
-
-    scheduledTimeoutIdRef.current = window.setTimeout(() => {
-      if (onSend) {
-        onSend(message.trim(), attachments, voiceBlob || undefined);
+      // Clear any previously scheduled messages
+      if (scheduledTimeoutIdRef.current) {
+        clearTimeout(scheduledTimeoutIdRef.current);
       }
-      resetMessageInputs();
-      toast.success("Scheduled message sent!");
-    }, timeDifference);
 
-    toast.success(`Message scheduled for: ${scheduledDateTime.toLocaleString()}`);
+      // Schedule the message
+      scheduledTimeoutIdRef.current = window.setTimeout(() => {
+        if (onSend) {
+          onSend(message.trim(), attachments, voiceBlob || undefined);
+        }
+        setMessage("");
+        setAttachments([]);
+        setVoiceBlob(null);
+        setAudioURL(null);
+
+        toast.success("Message sent successfully!", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      }, timeDifference);
+
+      toast.success(`Message scheduled for: ${date.toLocaleString()}`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    } else {
+      toast.error("Scheduled time must be in the future. Please select a valid time.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
   };
 
   const cancelScheduledMessage = () => {
     if (scheduledTimeoutIdRef.current) {
       clearTimeout(scheduledTimeoutIdRef.current);
       scheduledTimeoutIdRef.current = null;
-      toast.info("Scheduled message canceled.");
+
+      toast.info("Scheduled message canceled.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
   };
 
@@ -160,7 +184,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <>
-      <div className="p-5 flex flex-col gap-3 bg-gradient-to-br from-blue-50 via-teal-50 to-lime-100 rounded-lg shadow-lg dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 dark:text-white transition-all">
+      <div className="p-5 flex flex-col gap-2 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 transition-all">
+
+        {/* Attachment Preview */}
         {attachments.length > 0 && (
           <div className="flex gap-3 overflow-x-auto p-2">
             {attachments.map((file, index) => (
@@ -193,7 +219,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         )}
 
-        <div className="flex items-center gap-3">
+        {/* Input Area */}
+        <div className="flex gap-2 items-center">
+          {/* File Input */}
           <input
             type="file"
             ref={fileInputRef}
@@ -203,13 +231,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onChange={handleFileSelect}
           />
 
+          {/* Attachment Dropdown */}
           <Dropdown>
             <DropdownTrigger>
-              <Button
-                isIconOnly
-                variant="light"
-                className="text-gray-700 dark:text-white transition-transform hover:scale-105"
-              >
+              <Button className="text-white" isIconOnly variant="light">
                 <Paperclip size={20} />
               </Button>
             </DropdownTrigger>
@@ -231,26 +256,27 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             </DropdownMenu>
           </Dropdown>
 
-          <Popover placement="top">
-            <PopoverTrigger>
-              <Button isIconOnly variant="light" className="text-gray-700 dark:text-white">
-                <Smile size={20} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent>
-              <Picker
-                data={data}
-                onEmojiSelect={(emoji: any) => {
-                  setMessage((prev) => prev + emoji.native);
-                }}
-                theme={theme === "dark" ? "dark" : "light"}
-              />
-            </PopoverContent>
-          </Popover>
+          {/* Emoji Picker */}
+          <Popover>
+  <PopoverTrigger>
+    <Button className="text-white" isIconOnly variant="light">
+      <Smile size={20} />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent className="w-full max-w-[90vw] sm:max-w-[250px] md:max-w-[300px] lg:max-w-[400px]">
+    <Picker
+      data={data}
+      onEmojiSelect={(emoji: any) => setMessage((prev) => prev + emoji.native)}
+      theme={theme === "dark" ? "dark" : "light"}
+    />
+  </PopoverContent>
+</Popover>
 
+
+          {/* Input Field */}
           <Input
             className="flex-1"
-            placeholder="Type a message..."
+            placeholder="Type a Message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => {
@@ -260,48 +286,58 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               }
             }}
             endContent={
-              <div className="flex gap-2">
-                <Button
-                  isIconOnly
-                  variant="light"
-                  size="sm"
-                  onPress={() => setShowSchedule(true)}
-                >
+              <div className="flex">
+                {/* Calendar/Schedule Icon */}
+                <Button isIconOnly variant="light" onPress={() => setShowSchedule(true)}>
                   <Calendar size={20} />
                 </Button>
+
+                {/* Recording Button */}
                 {isRecording ? (
-                  <Button
-                    color="danger"
-                    variant="flat"
-                    size="sm"
-                    className="min-w-[80px]"
-                    onPress={stopRecording}
-                  >
+                  <Button variant="flat" className="min-w-[80px]" color="danger" onPress={stopRecording}>
                     {formatTime(recordingTime)}
                   </Button>
                 ) : (
-                  <Button
-                    isIconOnly
-                    variant="light"
-                    size="sm"
-                    onPress={startRecording}
-                  >
+                  <Button isIconOnly variant="light" onPress={startRecording}>
                     <Mic size={20} />
                   </Button>
                 )}
-                <Button
-                  isIconOnly
-                  variant="light"
-                  size="sm"
-                  isDisabled
-                >
-                  <Send size={20} />
-                </Button>
+
+                {/* Conditional Send Icon */}
+                {(message.trim() || voiceBlob || attachments.length > 0) && (
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    onPress={handleSend}
+                  >
+                    <Send size={20} />
+                  </Button>
+                )}
               </div>
             }
           />
         </div>
+
+
+        {/* Audio Preview */}
+        {audioURL && (
+          <div className="flex items-center gap-3 mt-2">
+            <audio controls src={audioURL} className="flex-1" />
+            <Button
+              isIconOnly
+              color="danger"
+              variant="flat"
+              onPress={() => {
+                setVoiceBlob(null);
+                setAudioURL(null);
+              }}
+            >
+              <X size={20} />
+            </Button>
+          </div>
+        )}
       </div>
+
 
       {showSchedule && (
         <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)}>
@@ -339,3 +375,4 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     </>
   );
 };
+
