@@ -30,6 +30,8 @@ export const WhatsAppDashboard = () => {
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [typingStatus, setTypingStatus] = useState<Record<string, boolean>>({});
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [isNavbarHidden, setIsNavbarHidden] = useState(false);
+
   
   // Modal States
   const {
@@ -170,39 +172,50 @@ export const WhatsAppDashboard = () => {
     onBotSettingsClose();
   }, []);
 
-  return (
+  useEffect(() => {
+  if (selectedChat) {
+    setChatMessages(messages[selectedChat.id] || []);
+    setIsNavbarHidden(true);
+  } else {
+    setIsNavbarHidden(false);
+  }
+}, [selectedChat, messages]);
+
+ return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Mobile Header */}
-      <Navbar className="lg:hidden bg-primary/90 shadow-md">
-        <NavbarContent>
-          <Button
-            isIconOnly
-            variant="light"
-            onPress={onSidebarOpen}
-          >
-            <Menu size={24} />
-          </Button>
-          <NavbarBrand>
-            <MessageCircle className="text-primary" />
-            <p className="font-bold text-inherit ml-2">WhatsApp</p>
-          </NavbarBrand>
-        </NavbarContent>
-        <NavbarContent justify="end">
-          <Tooltip content="New Chat">
+      {!isNavbarHidden && (
+        <Navbar className="lg:hidden bg-primary/90 shadow-md">
+          <NavbarContent>
             <Button
               isIconOnly
               variant="light"
-              onPress={onGroupManagementOpen}
+              onPress={onSidebarOpen}
             >
-              <Plus size={24} />
+              <Menu size={24} />
             </Button>
-          </Tooltip>
-        </NavbarContent>
-      </Navbar>
+            <NavbarBrand>
+              <MessageCircle className="text-primary" />
+              <p className="font-bold text-inherit ml-2">WhatsApp</p>
+            </NavbarBrand>
+          </NavbarContent>
+          <NavbarContent justify="end">
+            <Tooltip content="New Chat">
+              <Button
+                isIconOnly
+                variant="light"
+                onPress={onGroupManagementOpen}
+              >
+                <Plus size={24} />
+              </Button>
+            </Tooltip>
+          </NavbarContent>
+        </Navbar>
+      )}
 
       {/* Mobile Sidebar Modal */}
-      <Modal 
-        isOpen={isSidebarOpen} 
+      <Modal
+        isOpen={isSidebarOpen}
         onClose={onSidebarClose}
         size="full"
         scrollBehavior="inside"
@@ -225,7 +238,7 @@ export const WhatsAppDashboard = () => {
       </Modal>
 
       {/* Bot Settings Modal */}
-      <Modal 
+      <Modal
         isOpen={isBotSettingsOpen}
         onClose={onBotSettingsClose}
         size="2xl"
@@ -270,7 +283,7 @@ export const WhatsAppDashboard = () => {
       </Modal>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className={`flex-1 flex overflow-hidden ${isNavbarHidden ? "h-screen" : ""}`}>
         {/* Desktop Sidebar */}
         <div className="hidden lg:block w-80 border-r border-divider bg-gray-50">
           <ChatSidebar

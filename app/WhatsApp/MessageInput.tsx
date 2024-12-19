@@ -258,19 +258,19 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
           {/* Emoji Picker */}
           <Popover>
-  <PopoverTrigger>
-    <Button className="text-white" isIconOnly variant="light">
-      <Smile size={20} />
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent className="w-full max-w-[90vw] sm:max-w-[250px] md:max-w-[300px] lg:max-w-[400px]">
-    <Picker
-      data={data}
-      onEmojiSelect={(emoji: any) => setMessage((prev) => prev + emoji.native)}
-      theme={theme === "dark" ? "dark" : "light"}
-    />
-  </PopoverContent>
-</Popover>
+            <PopoverTrigger>
+              <Button className="text-white hidden md:flex" isIconOnly variant="light">
+                <Smile size={20} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full max-w-[90vw] sm:max-w-[250px] md:max-w-[300px] lg:max-w-[400px]">
+              <Picker
+                data={data}
+                onEmojiSelect={(emoji: any) => setMessage((prev) => prev + emoji.native)}
+                theme={theme === "dark" ? "dark" : "light"}
+              />
+            </PopoverContent>
+          </Popover>
 
 
           {/* Input Field */}
@@ -292,35 +292,35 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   <Calendar size={20} />
                 </Button>
 
-                {/* Recording Button */}
-                {isRecording ? (
-                  <Button variant="flat" className="min-w-[80px]" color="danger" onPress={stopRecording}>
-                    {formatTime(recordingTime)}
-                  </Button>
-                ) : (
+                {/* Recording Button (Hidden if user is typing) */}
+                {!message.trim() && !isRecording && (
                   <Button isIconOnly variant="light" onPress={startRecording}>
                     <Mic size={20} />
                   </Button>
                 )}
 
+                {/* Show recording button if recording is active */}
+                {isRecording && (
+                  <Button variant="flat" className="min-w-[80px]" color="danger" onPress={stopRecording}>
+                    {formatTime(recordingTime)}
+                  </Button>
+                )}
+
                 {/* Conditional Send Icon */}
                 {(message.trim() || voiceBlob || attachments.length > 0) && (
-                  <Button
-                    isIconOnly
-                    variant="light"
-                    onPress={handleSend}
-                  >
+                  <Button isIconOnly variant="light" onPress={handleSend}>
                     <Send size={20} />
                   </Button>
                 )}
               </div>
             }
           />
+
         </div>
 
 
         {/* Audio Preview */}
-        {audioURL && (
+        {/* {audioURL && (
           <div className="flex items-center gap-3 mt-2">
             <audio controls src={audioURL} className="flex-1" />
             <Button
@@ -335,7 +335,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               <X size={20} />
             </Button>
           </div>
-        )}
+        )} */}
       </div>
 
 
